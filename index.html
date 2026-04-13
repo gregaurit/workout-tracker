@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workout Tracker</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dbe3ef;
+      --accent: #2f6fed;
+      --accent-soft: #e8f0ff;
+      --good: #0f9d58;
+      --warn: #b54708;
+      --shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 18px; }
+    .hero, .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(219, 227, 239, 0.9);
+    }
+    .hero { padding: 20px; margin-bottom: 16px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 1.85rem; margin-bottom: 8px; }
+    .muted { color: var(--muted); }
+    .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+    .stack { display: grid; gap: 16px; }
+    .card { padding: 18px; }
+    .toolbar { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+    label { display: block; font-size: 0.92rem; font-weight: 700; margin-bottom: 6px; }
+    input, select, textarea, button {
+      width: 100%; font: inherit; border-radius: 12px; border: 1px solid var(--line);
+      background: #fff; padding: 12px;
+    }
+    textarea { min-height: 78px; resize: vertical; }
+    button { cursor: pointer; border: none; background: var(--accent); color: #fff; font-weight: 700; }
+    button.secondary { background: #eef3fb; color: var(--text); border: 1px solid var(--line); }
+    button.good { background: var(--good); }
+    .pill {
+      display: inline-block; padding: 6px 10px; border-radius: 999px; background: var(--accent-soft);
+      color: var(--accent); font-size: 0.82rem; font-weight: 700; margin-right: 8px; margin-bottom: 8px;
+    }
+    .exercise {
+      border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 14px; background: #fcfdff;
+    }
+    .exercise-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .exercise-name { font-size: 1.06rem; font-weight: 800; margin-bottom: 4px; }
+    .exercise-meta { font-size: 0.9rem; color: var(--muted); }
+    .set-grid { display: grid; grid-template-columns: 80px repeat(3, 1fr) 88px; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .set-grid.header { color: var(--muted); font-size: 0.84rem; font-weight: 700; margin-top: 10px; }
+    .set-label { font-weight: 700; }
+    .checkbox-wrap { display: flex; align-items: center; justify-content: center; }
+    .checkbox-wrap input { width: 20px; height: 20px; padding: 0; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 10px; }
+    .summary-box { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #fbfcfe; }
+    .summary-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
+    .summary-value { font-size: 1.35rem; font-weight: 800; }
+    .history-list { max-height: 420px; overflow: auto; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+    .history-row { padding: 10px 0; border-bottom: 1px solid #edf2f7; font-size: 0.93rem; }
+    .tiny { font-size: 0.82rem; color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .status { margin-top: 10px; font-weight: 700; }
+    .status.ok { color: var(--good); }
+    .status.warn { color: var(--warn); }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .set-grid { grid-template-columns: 68px 1fr 1fr 1fr 72px; font-size: 0.92rem; }
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .container { padding: 12px; }
+      .hero, .card { padding: 14px; }
+      h1 { font-size: 1.45rem; }
+      .set-grid { grid-template-columns: 54px 1fr 1fr 1fr 62px; gap: 6px; }
+      input, select, textarea, button { padding: 11px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>Workout Tracker</h1>
+      <p class="muted">Log Workout 1, 2, or 3, save progress on your device, and export your history to CSV.</p>
+      <div>
+        <span class="pill">Auto date included</span>
+        <span class="pill">Works offline after first load</span>
+        <span class="pill">No Google Apps needed</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="stack">
+        <div class="card">
+          <h2>Start workout</h2>
+          <div class="toolbar">
+            <div>
+              <label for="workoutSelect">Workout</label>
+              <select id="workoutSelect"></select>
+            </div>
+            <div>
+              <label for="workoutDate">Workout date</label>
+              <input id="workoutDate" type="date" />
+            </div>
+            <div>
+              <label for="startTime">Start time</label>
+              <input id="startTime" type="time" />
+            </div>
+            <div>
+              <button id="loadWorkoutBtn" type="button">Load</button>
+            </div>
+          </div>
+          <p class="tiny" style="margin-top:10px;">Today’s date and current time are filled in automatically.</p>
+        </div>
+
+        <div class="card">
+          <div class="summary-grid">
+            <div class="summary-box"><div class="summary-label">Workout</div><div id="summaryWorkout" class="summary-value">—</div></div>
+            <div class="summary-box"><div class="summary-label">Exercises completed</div><div id="summaryDone" class="summary-value">0</div></div>
+            <div class="summary-box"><div class="summary-label">Estimated volume</div><div id="summaryVolume" class="summary-value">0</div></div>
+          </div>
+          <div id="workoutContainer"></div>
+          <div class="actions">
+            <button id="saveWorkoutBtn" class="good" type="button">Save workout</button>
+            <button id="clearWorkoutBtn" class="secondary" type="button">Clear current form</button>
+          </div>
+          <div id="saveStatus" class="status"></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>Exercise history</h2>
+          <label for="historyExercise">Exercise</label>
+          <select id="historyExercise"></select>
+
+          <label for="historyDate">Or pick a workout date</label>
+          <select id="historyDate"></select>
+
+          <div class="actions">
+            <button id="loadHistoryBtn" type="button">Load by exercise</button>
+            <button id="loadDateBtn" class="secondary" type="button">Load by date</button>
+            <button id="exportCsvBtn" class="secondary" type="button">Export all CSV</button>
+          </div>
+          <div id="historyResults" class="history-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WORKOUTS = {
+      "Workout 1": [
+        { name: "Reverse plank", sets: 3, reps: 30, weight: 0, unit: "sec", notes: "hold time" },
+        { name: "Kelso shrug incline", sets: 3, reps: 10, weight: 15, unit: "lb", notes: "" },
+        { name: "Reverse bench press", sets: 3, reps: 10, weight: 15, unit: "lb", notes: "" },
+        { name: "Bulgarian squat", sets: 3, reps: 10, weight: 13, unit: "lb", notes: "each side" },
+        { name: "Kettlebell one-arm walk", sets: 3, reps: 30, weight: 13, unit: "sec/lb", notes: "each side" },
+        { name: "Half ball crunches", sets: 3, reps: 10, weight: 7.5, unit: "lb", notes: "optional bodyweight" },
+        { name: "Lay down reverse shoulder fly", sets: 3, reps: 10, weight: 5, unit: "lb", notes: "" },
+        { name: "Shoulder press", sets: 3, reps: 10, weight: 10, unit: "lb", notes: "" },
+        { name: "Single-leg Romanian deadlift", sets: 3, reps: 10, weight: 13, unit: "lb", notes: "each side" }
+      ],
+      "Workout 2": [
+        { name: "Side plank with weight", sets: 3, reps: 30, weight: 5, unit: "sec/lb", notes: "each side" },
+        { name: "Side plank with leg on bench", sets: 3, reps: 20, weight: 0, unit: "sec", notes: "each side" },
+        { name: "Barbell tricep press", sets: 3, reps: 10, weight: 15, unit: "lb", notes: "" },
+        { name: "Chest fly", sets: 3, reps: 10, weight: 10, unit: "lb", notes: "" },
+        { name: "Ball squat against wall", sets: 3, reps: 10, weight: 10, unit: "lb", notes: "optional bodyweight" },
+        { name: "Kelso weight band pull", sets: 3, reps: 10, weight: 0, unit: "band", notes: "" },
+        { name: "Face pull shoulder fly thing", sets: 3, reps: 10, weight: 7.5, unit: "lb", notes: "" },
+        { name: "Pushup with rounded back extension", sets: 3, reps: 10, weight: 0, unit: "bodyweight", notes: "" }
+      ],
+      "Workout 3": [
+        { name: "Kettlebell sumo squat", sets: 3, reps: 10, weight: 0, unit: "lb", notes: "" },
+        { name: "Double kettlebell sumo deadlift", sets: 3, reps: 10, weight: 26, unit: "lb", notes: "" },
+        { name: "Exercise ball dead bug", sets: 3, reps: 10, weight: 7.5, unit: "lb", notes: "each side" },
+        { name: "Dumbbell spider curl", sets: 3, reps: 10, weight: 15, unit: "lb", notes: "" },
+        { name: "Weighted chest supported IYT", sets: 3, reps: 10, weight: 2.5, unit: "lb", notes: "" },
+        { name: "Kelso shrug", sets: 3, reps: 10, weight: 15, unit: "lb", notes: "bench @ 45 degrees" },
+        { name: "Kettlebell windmill", sets: 3, reps: 10, weight: 9, unit: "lb", notes: "each side" },
+        { name: "Dumbbell pullover", sets: 3, reps: 10, weight: 10, unit: "lb", notes: "" },
+        { name: "Dual kettlebell step-up / knee drive", sets: 3, reps: 10, weight: 13, unit: "lb", notes: "each side" }
+      ]
+    };
+
+    const STORAGE_KEY = "greg_workout_tracker_logs_v4";
+
+    const workoutSelect = document.getElementById("workoutSelect");
+    const workoutDate = document.getElementById("workoutDate");
+    const startTime = document.getElementById("startTime");
+    const loadWorkoutBtn = document.getElementById("loadWorkoutBtn");
+    const workoutContainer = document.getElementById("workoutContainer");
+    const saveWorkoutBtn = document.getElementById("saveWorkoutBtn");
+    const clearWorkoutBtn = document.getElementById("clearWorkoutBtn");
+    const saveStatus = document.getElementById("saveStatus");
+    const historyExercise = document.getElementById("historyExercise");
+    const historyDate = document.getElementById("historyDate");
+    const loadHistoryBtn = document.getElementById("loadHistoryBtn");
+    const loadDateBtn = document.getElementById("loadDateBtn");
+    const historyResults = document.getElementById("historyResults");
+    const exportCsvBtn = document.getElementById("exportCsvBtn");
+    const summaryWorkout = document.getElementById("summaryWorkout");
+    const summaryDone = document.getElementById("summaryDone");
+    const summaryVolume = document.getElementById("summaryVolume");
+
+    function todayString() {
+      const d = new Date();
+      const off = d.getTimezoneOffset();
+      const local = new Date(d.getTime() - off * 60000);
+      return local.toISOString().slice(0, 10);
+    }
+
+    function nowTimeString() {
+      return new Date().toTimeString().slice(0, 5);
+    }
+
+    function getLogs() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLogs(logs) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function csvEscape(value) {
+      const str = String(value ?? "");
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+
+    function populateWorkoutSelector() {
+      workoutSelect.innerHTML = "";
+      Object.keys(WORKOUTS).forEach(function(name) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        workoutSelect.appendChild(opt);
+      });
+    }
+
+    function populateHistorySelectors() {
+      historyExercise.innerHTML = "";
+      historyDate.innerHTML = "";
+
+      const seen = {};
+      const exercises = [];
+      Object.keys(WORKOUTS).forEach(function(group) {
+        WORKOUTS[group].forEach(function(item) {
+          if (!seen[item.name]) {
+            seen[item.name] = true;
+            exercises.push(item.name);
+          }
+        });
+      });
+      exercises.sort();
+      exercises.forEach(function(name) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        historyExercise.appendChild(opt);
+      });
+
+      const logs = getLogs();
+      const dateSet = {};
+      logs.forEach(function(item) {
+        if (item.workout_date) dateSet[item.workout_date] = true;
+      });
+      const dates = Object.keys(dateSet).sort().reverse();
+
+      const blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = dates.length ? "Select a date" : "No saved workout dates yet";
+      historyDate.appendChild(blank);
+
+      dates.forEach(function(date) {
+        const opt = document.createElement("option");
+        opt.value = date;
+        opt.textContent = date;
+        historyDate.appendChild(opt);
+      });
+    }
+
+    function renderWorkout() {
+      const selected = workoutSelect.value;
+      const workout = WORKOUTS[selected] || [];
+      summaryWorkout.textContent = selected || "—";
+      workoutContainer.innerHTML = "";
+
+      workout.forEach(function(exercise, exerciseIndex) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "exercise";
+
+        let setRows = "";
+        for (let i = 1; i <= exercise.sets; i++) {
+          setRows +=
+            '<div class="set-grid">' +
+              '<div class="set-label">Set ' + i + '</div>' +
+              '<input type="number" step="0.5" value="' + exercise.weight + '" data-exercise-index="' + exerciseIndex + '" data-set="' + i + '" data-field="weight" />' +
+              '<input type="number" step="1" value="' + exercise.reps + '" data-exercise-index="' + exerciseIndex + '" data-set="' + i + '" data-field="reps" />' +
+              '<input type="text" value="" placeholder="note" data-exercise-index="' + exerciseIndex + '" data-set="' + i + '" data-field="setNote" />' +
+              '<div class="checkbox-wrap"><input type="checkbox" checked data-exercise-index="' + exerciseIndex + '" data-set="' + i + '" data-field="done" /></div>' +
+            '</div>';
+        }
+
+        wrapper.innerHTML =
+          '<div class="exercise-header">' +
+            '<div>' +
+              '<div class="exercise-name">' + escapeHtml(exercise.name) + '</div>' +
+              '<div class="exercise-meta">Target: ' + exercise.sets + ' sets × ' + exercise.reps + ' ' + escapeHtml(exercise.unit) + (exercise.notes ? ' · ' + escapeHtml(exercise.notes) : '') + '</div>' +
+            '</div>' +
+            '<div class="pill">Default ' + exercise.weight + ' ' + escapeHtml(exercise.unit.indexOf('lb') >= 0 ? 'lb' : exercise.unit) + '</div>' +
+          '</div>' +
+          '<div class="set-grid header"><div></div><div>Weight</div><div>Reps / sec</div><div>Set note</div><div>Done</div></div>' +
+          setRows +
+          '<label>Exercise note</label>' +
+          '<textarea data-exercise-index="' + exerciseIndex + '" data-field="exerciseNote" placeholder="How did this movement feel today?"></textarea>';
+        workoutContainer.appendChild(wrapper);
+      });
+
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const selected = workoutSelect.value;
+      const workout = WORKOUTS[selected] || [];
+      let doneCount = 0;
+      let totalVolume = 0;
+
+      workout.forEach(function(exercise, exerciseIndex) {
+        for (let set = 1; set <= exercise.sets; set++) {
+          const doneEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="done"]');
+          const weightEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="weight"]');
+          const repsEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="reps"]');
+          if (doneEl && doneEl.checked) doneCount += 1;
+          const weight = parseFloat(weightEl ? weightEl.value : 0);
+          const reps = parseFloat(repsEl ? repsEl.value : 0);
+          if (!Number.isNaN(weight) && !Number.isNaN(reps)) totalVolume += weight * reps;
+        }
+      });
+
+      summaryDone.textContent = String(doneCount);
+      summaryVolume.textContent = totalVolume.toFixed(0);
+    }
+
+    function collectWorkoutEntries() {
+      const selected = workoutSelect.value;
+      const workout = WORKOUTS[selected] || [];
+      const entries = [];
+      const timestamp = new Date().toISOString();
+
+      workout.forEach(function(exercise, exerciseIndex) {
+        const exerciseNoteEl = document.querySelector('textarea[data-exercise-index="' + exerciseIndex + '"][data-field="exerciseNote"]');
+        const exerciseNote = exerciseNoteEl ? exerciseNoteEl.value.trim() : "";
+
+        for (let set = 1; set <= exercise.sets; set++) {
+          const weightEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="weight"]');
+          const repsEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="reps"]');
+          const setNoteEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="setNote"]');
+          const doneEl = document.querySelector('[data-exercise-index="' + exerciseIndex + '"][data-set="' + set + '"][data-field="done"]');
+
+          entries.push({
+            timestamp: timestamp,
+            workout_date: workoutDate.value,
+            start_time: startTime.value,
+            workout_group: selected,
+            exercise_name: exercise.name,
+            unit: exercise.unit,
+            set_number: set,
+            actual_weight: parseFloat(weightEl ? weightEl.value : 0),
+            actual_reps: parseFloat(repsEl ? repsEl.value : 0),
+            completed: !!(doneEl && doneEl.checked),
+            set_note: setNoteEl ? setNoteEl.value.trim() : "",
+            exercise_note: exerciseNote
+          });
+        }
+      });
+
+      return entries;
+    }
+
+    function saveCurrentWorkout() {
+      const logs = getLogs();
+      const entries = collectWorkoutEntries();
+      logs.push.apply(logs, entries);
+      saveLogs(logs);
+      saveStatus.textContent = 'Saved ' + entries.length + ' set entries on ' + workoutDate.value + '.';
+      saveStatus.className = 'status ok';
+      populateHistorySelectors();
+      loadHistoryByExercise();
+    }
+
+    function clearCurrentForm() {
+      renderWorkout();
+      saveStatus.textContent = 'Form cleared.';
+      saveStatus.className = 'status warn';
+    }
+
+    function loadHistoryByExercise() {
+      const logs = getLogs();
+      const selectedExercise = historyExercise.value;
+      const filtered = logs.filter(function(row) {
+        return row.exercise_name === selectedExercise;
+      }).sort(function(a, b) {
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
+
+      historyResults.innerHTML = '';
+      if (!filtered.length) {
+        historyResults.innerHTML = '<div class="history-row muted">No saved history yet for ' + escapeHtml(selectedExercise) + '.</div>';
+        return;
+      }
+
+      filtered.slice(0, 50).forEach(function(row) {
+        const div = document.createElement('div');
+        div.className = 'history-row';
+        div.innerHTML =
+          '<strong>' + escapeHtml(row.workout_date) + '</strong> · ' + escapeHtml(row.workout_group) + ' · Set ' + row.set_number + '<br>' +
+          (row.actual_weight || 0) + ' ' + (row.unit && row.unit.indexOf('lb') >= 0 ? 'lb' : escapeHtml(row.unit || '')) + ' · ' + row.actual_reps + ' ' + (row.unit && row.unit.indexOf('sec') >= 0 ? 'sec' : 'reps') + ' · ' + (row.completed ? 'done' : 'not done') +
+          (row.set_note ? '<br><span class="tiny">Set note: ' + escapeHtml(row.set_note) + '</span>' : '') +
+          (row.exercise_note ? '<br><span class="tiny">Exercise note: ' + escapeHtml(row.exercise_note) + '</span>' : '');
+        historyResults.appendChild(div);
+      });
+    }
+
+    function loadHistoryByDate() {
+      const logs = getLogs();
+      const selectedDate = historyDate.value;
+      historyResults.innerHTML = '';
+
+      if (!selectedDate) {
+        historyResults.innerHTML = '<div class="history-row muted">Pick a saved workout date first.</div>';
+        return;
+      }
+
+      const filtered = logs.filter(function(row) {
+        return row.workout_date === selectedDate;
+      }).sort(function(a, b) {
+        if (a.workout_group !== b.workout_group) return a.workout_group.localeCompare(b.workout_group);
+        if (a.exercise_name !== b.exercise_name) return a.exercise_name.localeCompare(b.exercise_name);
+        return a.set_number - b.set_number;
+      });
+
+      if (!filtered.length) {
+        historyResults.innerHTML = '<div class="history-row muted">No workout found for ' + escapeHtml(selectedDate) + '.</div>';
+        return;
+      }
+
+      const grouped = {};
+      filtered.forEach(function(row) {
+        if (!grouped[row.workout_group]) grouped[row.workout_group] = {};
+        if (!grouped[row.workout_group][row.exercise_name]) grouped[row.workout_group][row.exercise_name] = [];
+        grouped[row.workout_group][row.exercise_name].push(row);
+      });
+
+      Object.keys(grouped).forEach(function(groupName) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'history-row';
+        groupDiv.innerHTML = '<strong>' + escapeHtml(selectedDate) + '</strong> · ' + escapeHtml(groupName);
+        historyResults.appendChild(groupDiv);
+
+        Object.keys(grouped[groupName]).forEach(function(exerciseName) {
+          const rows = grouped[groupName][exerciseName];
+          const exDiv = document.createElement('div');
+          exDiv.className = 'history-row';
+          exDiv.innerHTML = '<strong>' + escapeHtml(exerciseName) + '</strong><br>' + rows.map(function(row) {
+            return 'Set ' + row.set_number + ': ' + (row.actual_weight || 0) + ' ' + (row.unit && row.unit.indexOf('lb') >= 0 ? 'lb' : escapeHtml(row.unit || '')) + ' · ' + row.actual_reps + ' ' + (row.unit && row.unit.indexOf('sec') >= 0 ? 'sec' : 'reps') + (row.set_note ? ' · ' + escapeHtml(row.set_note) : '');
+          }).join('<br>') + (rows[0] && rows[0].exercise_note ? '<br><span class="tiny">Exercise note: ' + escapeHtml(rows[0].exercise_note) + '</span>' : '');
+          historyResults.appendChild(exDiv);
+        });
+      });
+    }
+
+    function exportCsv() {
+      const logs = getLogs();
+      if (!logs.length) {
+        saveStatus.textContent = 'No logs available to export yet.';
+        saveStatus.className = 'status warn';
+        return;
+      }
+
+      const headers = [
+        'timestamp', 'workout_date', 'start_time', 'workout_group', 'exercise_name', 'unit',
+        'set_number', 'actual_weight', 'actual_reps', 'completed', 'set_note', 'exercise_note'
+      ];
+      const rows = logs.map(function(log) {
+        return headers.map(function(h) { return csvEscape(log[h]); });
+      });
+      const csv = [headers.join(',')].concat(rows.map(function(r) { return r.join(','); })).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'workout_logs_' + todayString() + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      saveStatus.textContent = 'CSV exported.';
+      saveStatus.className = 'status ok';
+    }
+
+    workoutContainer.addEventListener('input', updateSummary);
+    loadWorkoutBtn.addEventListener('click', renderWorkout);
+    workoutSelect.addEventListener('change', renderWorkout);
+    saveWorkoutBtn.addEventListener('click', saveCurrentWorkout);
+    clearWorkoutBtn.addEventListener('click', clearCurrentForm);
+    loadHistoryBtn.addEventListener('click', loadHistoryByExercise);
+    loadDateBtn.addEventListener('click', loadHistoryByDate);
+    exportCsvBtn.addEventListener('click', exportCsv);
+
+    workoutDate.value = todayString();
+    startTime.value = nowTimeString();
+    populateWorkoutSelector();
+    populateHistorySelectors();
+    renderWorkout();
+    loadHistoryByExercise();
+  </script>
+</body>
+</html>
