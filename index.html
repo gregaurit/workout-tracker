@@ -432,6 +432,9 @@
     }
 
     function populateSelectors() {
+      workoutSelect.innerHTML = "";
+      historyExercise.innerHTML = "";
+
       Object.keys(WORKOUTS).forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
@@ -447,47 +450,37 @@
         historyExercise.appendChild(opt);
       });
 
-      if (!document.getElementById("historyDate")) {
-        const historyCard = document.querySelectorAll('.card')[2];
-        const label = document.createElement('label');
-        label.setAttribute('for', 'historyDate');
-        label.textContent = 'Or pick a workout date';
-        historyCard.insertBefore(label, historyCard.querySelector('.actions'));
+      let historyDate = document.getElementById('historyDate');
+      let loadDateBtn = document.getElementById('loadDateBtn');
 
-        const select = document.createElement('select');
-        select.id = 'historyDate';
-        historyCard.insertBefore(select, historyCard.querySelector('.actions'));
+      if (!historyDate) {
+        const historyCard = historyExercise.closest('.card');
 
-        const calBtn = document.createElement('button');
-        calBtn.id = 'loadDateBtn';
-        calBtn.textContent = 'Load by date';
-        calBtn.className = 'secondary';
-        historyCard.querySelector('.actions').appendChild(calBtn);
-        calBtn.addEventListener('click', loadDateHistory);
+        const dateLabel = document.createElement('label');
+        dateLabel.setAttribute('for', 'historyDate');
+        dateLabel.textContent = 'Or pick a workout date';
+
+        historyDate = document.createElement('select');
+        historyDate.id = 'historyDate';
+
+        loadDateBtn = document.createElement('button');
+        loadDateBtn.id = 'loadDateBtn';
+        loadDateBtn.textContent = 'Load by date';
+        loadDateBtn.className = 'secondary';
+        loadDateBtn.type = 'button';
+
+        const actions = historyCard.querySelector('.actions');
+        historyCard.insertBefore(dateLabel, actions);
+        historyCard.insertBefore(historyDate, actions);
+        actions.appendChild(loadDateBtn);
+
+        loadDateBtn.addEventListener('click', loadDateHistory);
       }
 
       refreshDateSelector();
     }
 
-    function refreshDateSelector() {
-      const historyDate = document.getElementById('historyDate');
-      if (!historyDate) return;
-      const logs = getLogs();
-      const dates = uniqueDatesFromLogs(logs);
-      historyDate.innerHTML = '';
-      const first = document.createElement('option');
-      first.value = '';
-      first.textContent = dates.length ? 'Select a date' : 'No saved workout dates yet';
-      historyDate.appendChild(first);
-      dates.forEach(date => {
-        const opt = document.createElement('option');
-        opt.value = date;
-        opt.textContent = date;
-        historyDate.appendChild(opt);
-      });
-    }
-
-    function renderWorkout() {
+    function renderWorkout() {) {
       const selected = workoutSelect.value;
       const workout = WORKOUTS[selected];
       summaryWorkout.textContent = selected;
@@ -733,6 +726,7 @@
 
     workoutContainer.addEventListener("input", updateSummary);
     loadWorkoutBtn.addEventListener("click", renderWorkout);
+    workoutSelect.addEventListener("change", renderWorkout);
     saveWorkoutBtn.addEventListener("click", saveCurrentWorkout);
     clearWorkoutBtn.addEventListener("click", clearCurrentForm);
     loadHistoryBtn.addEventListener("click", loadHistory);
